@@ -1,4 +1,3 @@
-// filepath: d:\workspace\altoX\src\shared\services\gemini-service.ts
 import { GeminiRequest, GeminiResponse } from '../types/gemini.types';
 
 export async function generateCodeFromGemini(request: GeminiRequest): Promise<GeminiResponse> {
@@ -6,10 +5,14 @@ export async function generateCodeFromGemini(request: GeminiRequest): Promise<Ge
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
     if (!apiKey) {
-      return { code: '', language: 'javascript', error: 'Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.' };
+      return { code: '', language: 'javascript', error: 'Gemini API key is missing' };
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    const formattedPrompt = `${request.prompt}
+
+${JSON.stringify(request.jsonData, null, 2)}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -18,41 +21,43 @@ export async function generateCodeFromGemini(request: GeminiRequest): Promise<Ge
       },
       body: JSON.stringify({
         contents: [{
-          parts: [{
-            text: `Given this JSON data: ${JSON.stringify(request.jsonData)}, ${request.prompt}`
-          }]
+          parts: [{ text: formattedPrompt }]
         }]
       }),
     });
 
     if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
-      try {
-        const errorData = await response.json();
-        errorMessage += ` - ${errorData.error.message}`; // Try to get a more specific error
-      } catch (e) {
-        // Could not parse JSON error response
-      }
-      throw new Error(errorMessage);
+      const errorData = await response.json();
+      throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
-
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      return { code: '', language: 'javascript', error: 'No response candidates found in Gemini API response.' };
+    
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error('Invalid response format from Gemini API');
     }
 
     const generatedText = data.candidates[0].content.parts[0].text;
+    const language = determineLanguage(generatedText);
 
     return {
-      code: generatedText,
-      language: 'javascript' // Or determine the language dynamically if possible
+      code: generatedText.trim(),
+      language: language
     };
+
   } catch (error) {
+    console.error('Gemini API error:', error);
     return {
       code: '',
-      language: 'javascript',
+      language: 'plaintext',
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
   }
+}
+
+function determineLanguage(code: string): string {
+  if (code.includes('<!DOCTYPE html') || code.includes('<html')) return 'html';
+  if (code.includes('import React')) return 'jsx';
+  if (code.includes('@tailwind') || code.startsWith('.') || code.includes('{')) return 'css';
+  return 'plaintext';
 }

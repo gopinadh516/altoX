@@ -42,58 +42,6 @@ Responsiveness: Implement responsiveness using Bootstrap 5's responsive utilitie
 
 Example Raw JSON Input:
 
-{
-  "type": "FRAME",
-  "id": "4002:8273",
-  "name": "promo-1",
-  "x": 318,
-  "y": 265,
-  "width": 318,
-  "height": 277,
-  "children": [
-    {
-      "type": "VECTOR",
-      "id": "4002:8274",
-      "name": "BG Copy 3",
-      "x": 0,
-      "y": 0,
-      "width": 318,
-      "height": 277,
-      "fills": [
-        {
-          "type": "SOLID",
-          "visible": true,
-          "opacity": 1,
-          "blendMode": "NORMAL",
-          "color": {
-            "r": 1,
-            "g": 1,
-            "b": 1
-          },
-          "boundVariables": null
-        }
-      ],
-      "fillStyleId": "",
-      "strokes": []
-    },
-    {
-      "type": "TEXT",
-      "id": "4002:8275",
-      "name": "Sale 50%",
-      "x": 50,
-      "y": 100,
-      "characters": "Sale 50%",
-      "style": {
-        "fontSize": 24,
-        "fill": {
-          "r": 0,
-          "g": 0,
-          "b": 0
-        }
-      }
-    }
-  ]
-}
 
 Example Semantic JSON Output:
 
@@ -164,6 +112,8 @@ Example HTML and CSS Output:
     }
 }
 
-Now, process the following Raw JSON and generate the Semantic JSON, HTML, and CSS: The goal is to create a pixel-perfect, responsive HTML structure that mirrors the original Figma design in every detail.
+Now, process the following Raw JSON and generate the  HTML, bootstrap5, and CSS: The goal is to create a pixel-perfect, responsive HTML structure that mirrors the original Figma design in every detail. Return only the full code in <html></html> tags.
 - Do not use inline styles.
-- Do not writted starting or ending ```html and ```
+- Do not writted starting or ending ```html and ``` 
+- Make sure all style should style.css not inline
+- The expected output is html5 and css not json

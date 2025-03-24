@@ -272,6 +272,8 @@ Example HTML and CSS Output:
 
 }
 
-Now, process the following Raw JSON and generate the Semantic JSON, HTML, and CSS: The goal is to create a pixel-perfect, responsive HTML structure that mirrors the original Figma design in every detail. Return only the full code in <html></html> tags.
+Now, process the following Raw JSON and generate the  HTML5, and CSS: The goal is to create a pixel-perfect, responsive HTML structure that mirrors the original Figma design in every detail. Return only the full code in <html></html> tags.
 - Do not use inline styles.
 - Do not writted starting or ending ```html and ``` 
+- Make sure all style should style.css not inline
+- The expected output is html5 and css not json

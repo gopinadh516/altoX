@@ -53,6 +53,8 @@
     padding: 8px;
     border-radius: 4px;
     font-size: 14px;
+    text-transform: uppercase;
+    font-family: Signika, sans-serif;
   }
   
   .prompt-section select:focus {
@@ -61,19 +63,21 @@
   }
   
   .prompt-section button {
-    background: #4a9eff;
-    color: white;
+    background: #f24822;
+    color: #fff;
     border: none;
     padding: 10px 16px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
-    transition: background-color 0.2s;
+    transition: background-color .2s;
+    width: auto;
+    font-family: Signika, sans-serif;
   }
   
   .prompt-section button:hover:not(:disabled) {
-    background: #3a8eef;
+    background: #932c15;
   }
   
   .prompt-section button:disabled {

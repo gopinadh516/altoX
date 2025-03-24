@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-
-interface GeneratedCode {
-  code: string;
-  language: string;
-  error?: string;
-}
 import { generateCodeFromGemini } from '../shared/services/gemini-service';
 import { NodeData } from '../shared/types/gemini.types';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.min.css';
 import prompts from '../prompts.json';
 import './CodeGenerator.css';
+
+interface GeneratedCode {
+  code: string;
+  language: string;
+  error?: string;
+}
 
 interface Prompts {
   [key: string]: string;
@@ -26,7 +26,7 @@ interface CodeGeneratorProps {
 function RenderNodeStructure({ node }: { node: any }) {
   return (
     <>
-     {/* <div className="node-structure">
+        {/* <div className="node-structure">
       <div className="node-header">
         <span className="node-type">{node.type}</span>
         <span className="node-name">{node.name}</span>
@@ -40,7 +40,7 @@ function RenderNodeStructure({ node }: { node: any }) {
       )}
     </div> */}
     </>
-   
+
   );
 }
 
@@ -81,10 +81,36 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
     if (!generatedCode?.code) return;
 
     try {
-      await navigator.clipboard.writeText(generatedCode.code);
+      // For secure contexts (HTTPS or localhost)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(generatedCode.code);
+      } else {
+        // Fallback for non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = generatedCode.code;
+        
+        // Make the textarea out of viewport
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        
+        try {
+          textArea.select();
+          document.execCommand('copy');
+          textArea.remove();
+        } catch (err) {
+          console.error('Fallback: Oops, unable to copy', err);
+          textArea.remove();
+          setCopyStatus('error');
+          return;
+        }
+      }
+      
       setCopyStatus('copied');
       setTimeout(() => setCopyStatus('idle'), 2000);
     } catch (error) {
+      console.error('Failed to copy:', error);
       setCopyStatus('error');
       setTimeout(() => setCopyStatus('idle'), 2000);
     }
@@ -92,9 +118,8 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
 
   return (
     <div className="code-generator">
-        <h3>Selected Nodes Preview</h3>
+      <h3>Selected Nodes Preview</h3>
       <div className="image-container">
-      
         <div className="images">
           {hasSelection ? (
             nodeData.map((item, index) => (
@@ -131,6 +156,7 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
         <button
           onClick={handleGenerateCode}
           disabled={!hasSelection || isLoading}
+          className="generate-button"
         >
           {isLoading ? 'Generating...' : 'Generate Code'}
         </button>
@@ -143,9 +169,10 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
               {generatedCode.language.toUpperCase()}
             </span>
             <button
-              className="copy-button"
+              className={`copy-button ${copyStatus !== 'idle' ? `copy-button--${copyStatus}` : ''}`}
               onClick={handleCopyCode}
               disabled={!generatedCode.code || copyStatus === 'copied'}
+              data-status={copyStatus}
             >
               {copyStatus === 'copied' ? 'Copied!' : 
                copyStatus === 'error' ? 'Failed to copy' : 
