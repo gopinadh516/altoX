@@ -11,9 +11,10 @@
 /* Set a default font and background color */
 body {
   font-family: "Signika", sans-serif;
-  background-color: #e0e0e0;
-  color: #e0e0e0;
-  line-height: 1.6;
+  background-color: #f3f3f3;
+  color: #2e2e2e;
+  font-size: 14px;
+  line-height: 16px;
 }
 
 .container {

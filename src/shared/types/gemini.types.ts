@@ -2,7 +2,11 @@ export interface NodeData {
   json: any;
   image: ArrayBuffer;
 }
-
+export interface GeneratedCode {
+  code: string;
+  language: string;
+  error?: string;
+}
 export interface GeminiRequest {
   prompt: string;
   jsonData: any;
@@ -64,3 +68,4 @@ export interface FigmaNode {
 }
 
 export type CopyStatus = 'idle' | 'copied' | 'error';
+export interface GeminiResponse extends GeneratedCode {}
