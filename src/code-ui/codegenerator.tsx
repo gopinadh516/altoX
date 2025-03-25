@@ -1,41 +1,31 @@
-import { useEffect, useState } from 'react';
-import hljs from 'highlight.js';
-import html from 'highlight.js/lib/languages/xml';
-import css from 'highlight.js/lib/languages/css';
-import javascript from 'highlight.js/lib/languages/javascript';
-import typescript from 'highlight.js/lib/languages/typescript';
-import jsx from 'highlight.js/lib/languages/javascript';
-import 'highlight.js/styles/github-dark.min.css';
+import { useState, useEffect } from 'react';
 import { generateCodeFromGemini } from '../shared/services/gemini-service';
 import { NodeData, GeneratedCode, CopyStatus } from '../shared/types/gemini.types';
+import { CodeSection } from './CodeSection';
+import { LoadingSpinner } from './LoadingSpinner';
 import prompts from '../prompts.json';
 import './CodeGenerator.css';
-
-// Register highlight.js languages
-hljs.registerLanguage('html', html);
-hljs.registerLanguage('css', css);
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('jsx', jsx);
 
 interface CodeGeneratorProps {
   nodeData: NodeData[];
   hasSelection: boolean;
 }
 
-const LoadingSpinner = () => (
-  <div className="loading-spinner">
-    <div className="spinner"></div>
-    <span>Generating code...</span>
-  </div>
-);
+type CopyStates = {
+  html?: CopyStatus;
+  css?: CopyStatus;
+  code?: CopyStatus;
+};
 
 export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
-  const [selectedPrompt, setSelectedPrompt] = useState<keyof typeof prompts>(Object.keys(prompts)[0] as keyof typeof prompts);
+  const [selectedPrompt, setSelectedPrompt] = useState<keyof typeof prompts>(
+    Object.keys(prompts)[0] as keyof typeof prompts
+  );
   const [generatedCode, setGeneratedCode] = useState<GeneratedCode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle');
+  const [copyStates, setCopyStates] = useState<CopyStates>({});
   const [error, setError] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
 
   const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
     const binary = new Uint8Array(buffer).reduce(
@@ -48,30 +38,27 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
   useEffect(() => {
     setGeneratedCode(null);
     setError(null);
-    setCopyStatus('idle');
+    setCopyStates({});
+    setIsVisible(true);
   }, [nodeData]);
-
-  useEffect(() => {
-    if (generatedCode?.code) {
-      const codeElements = document.querySelectorAll('.code-preview > code');
-      codeElements.forEach(element => {
-        hljs.highlightElement(element as HTMLElement);
-      });
-    }
-  }, [generatedCode]);
 
   const handleGenerateCode = async () => {
     if (!nodeData.length) {
-      setError('No Figma nodes selected');
+      setError('Please select a node in Figma');
+      return;
+    }
+
+    if (!nodeData[0].json) {
+      setError('Invalid node data received');
       return;
     }
 
     setIsLoading(true);
-    setCopyStatus('idle');
+    setIsVisible(false);
+    setCopyStates({});
     setError(null);
 
     try {
-      console.log('Generating code with prompt:', selectedPrompt);
       const result = await generateCodeFromGemini({
         jsonData: nodeData[0].json,
         prompt: prompts[selectedPrompt]
@@ -81,8 +68,8 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
         throw new Error(result.error);
       }
 
-      console.log('Generated code:', result);
       setGeneratedCode(result);
+      setIsVisible(true);
     } catch (error) {
       console.error('Code generation error:', error);
       setError(error instanceof Error ? error.message : 'Failed to generate code');
@@ -92,15 +79,19 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
     }
   };
 
-  const handleCopyCode = async (codeToCopy: string) => {
+  const handleCopyCode = async (code: string, type: keyof CopyStates) => {
     try {
-      await navigator.clipboard.writeText(codeToCopy);
-      setCopyStatus('copied');
-      setTimeout(() => setCopyStatus('idle'), 2000);
+      await navigator.clipboard.writeText(code);
+      setCopyStates(prev => ({ ...prev, [type]: 'copied' }));
+      setTimeout(() => {
+        setCopyStates(prev => ({ ...prev, [type]: 'idle' }));
+      }, 2000);
     } catch (error) {
       console.error('Copy error:', error);
-      setCopyStatus('error');
-      setTimeout(() => setCopyStatus('idle'), 2000);
+      setCopyStates(prev => ({ ...prev, [type]: 'error' }));
+      setTimeout(() => {
+        setCopyStates(prev => ({ ...prev, [type]: 'idle' }));
+      }, 2000);
     }
   };
 
@@ -109,69 +100,45 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
       const [htmlPart, cssPart] = code.split('---CSS---').map(part => part.trim());
       return (
         <>
-          <div className="code-section">
-            <div className="code-header">
-              <span className="language-label">HTML</span>
-              <button
-                className={`copy-button ${copyStatus !== 'idle' ? `copy-button--${copyStatus}` : ''}`}
-                onClick={() => handleCopyCode(htmlPart)}
-                disabled={copyStatus === 'copied' || isLoading}
-              >
-                {copyStatus === 'copied' ? 'Copied!' : 'Copy HTML'}
-              </button>
-            </div>
-            <pre className="code-preview">
-              <code className="language-html">{htmlPart}</code>
-            </pre>
-          </div>
-          <div className="code-section">
-            <div className="code-header">
-              <span className="language-label">CSS</span>
-              <button
-                className={`copy-button ${copyStatus !== 'idle' ? `copy-button--${copyStatus}` : ''}`}
-                onClick={() => handleCopyCode(cssPart)}
-                disabled={copyStatus === 'copied' || isLoading}
-              >
-                {copyStatus === 'copied' ? 'Copied!' : 'Copy CSS'}
-              </button>
-            </div>
-            <pre className="code-preview">
-              <code className="language-css">{cssPart}</code>
-            </pre>
-          </div>
+          <CodeSection
+            code={htmlPart}
+            language="html"
+            label="HTML"
+            copyStatus={copyStates.html || 'idle'}
+            isLoading={isLoading}
+            onCopy={(code) => handleCopyCode(code, 'html')}
+          />
+          <CodeSection
+            code={cssPart}
+            language="css"
+            label="CSS"
+            copyStatus={copyStates.css || 'idle'}
+            isLoading={isLoading}
+            onCopy={(code) => handleCopyCode(code, 'css')}
+          />
         </>
       );
     }
 
-    // Handle React/Tailwind or Bootstrap code
     const displayLanguage = language === 'jsx' ? 'React + Tailwind' : language.toUpperCase();
     return (
-      <div className="code-section">
-        <div className="code-header">
-          <span className="language-label">{displayLanguage}</span>
-          <button
-            className={`copy-button ${copyStatus !== 'idle' ? `copy-button--${copyStatus}` : ''}`}
-            onClick={() => handleCopyCode(code)}
-            disabled={copyStatus === 'copied' || isLoading}
-          >
-            {copyStatus === 'copied' ? 'Copied!' : 'Copy Code'}
-          </button>
-        </div>
-        <pre className="code-preview">
-          <code className={`language-${language}`}>{code}</code>
-        </pre>
-      </div>
+      <CodeSection
+        code={code}
+        language={language}
+        label={displayLanguage}
+        copyStatus={copyStates.code || 'idle'}
+        isLoading={isLoading}
+        onCopy={(code) => handleCopyCode(code, 'code')}
+      />
     );
   };
 
   return (
     <div className="code-generator">
       {/* Node Preview Section */}
-      <h3>Selected Components Preview</h3>
       {hasSelection && nodeData.length > 0 && (
-     
         <div className="node-preview">
-     
+          <h3>Selected Components Preview</h3>
           <div className="image-preview">
             <img 
               src={`data:image/png;base64,${arrayBufferToBase64(nodeData[0].image)}`}
@@ -211,13 +178,11 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
 
       {/* Error Message */}
       {error && (
-        <div className="error-message">
-          {error}
-        </div>
+        <div className="error-message">{error}</div>
       )}
 
       {/* Generated Code Output */}
-      {generatedCode && (
+      {generatedCode && isVisible && (
         <div className="code-output">
           {renderCode(generatedCode.code, generatedCode.language)}
         </div>
