@@ -1,11 +1,15 @@
 import { GeminiRequest, GeminiResponse } from '../types/gemini.types';
 
 function determineLanguage(code: string, promptType: string): string {
-  if (promptType.toLowerCase().includes('react')) {
+  const lowerPrompt = promptType.toLowerCase();
+  if (lowerPrompt.includes('react') || lowerPrompt.includes('tailwind')) {
     return 'jsx';
   }
-  if (code.includes('---CSS---')) {
-    return 'html'; // Will be split into HTML/CSS
+  if (lowerPrompt.includes('bootstrap')) {
+    return 'html';
+  }
+  if (code.includes('<!DOCTYPE html') || code.includes('<html')) {
+    return 'html';
   }
   if (code.includes('import React')) {
     return 'jsx';

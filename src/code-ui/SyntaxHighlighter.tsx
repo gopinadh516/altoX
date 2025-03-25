@@ -1,35 +1,24 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import hljs from 'highlight.js';
-import html from 'highlight.js/lib/languages/xml';
-import css from 'highlight.js/lib/languages/css';
-import javascript from 'highlight.js/lib/languages/javascript';
-import typescript from 'highlight.js/lib/languages/typescript';
-import jsx from 'highlight.js/lib/languages/javascript';
-import 'highlight.js/styles/github-dark.min.css';
-
-// Register highlight.js languages
-hljs.registerLanguage('html', html);
-hljs.registerLanguage('css', css);
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('jsx', jsx);
+import 'highlight.js/styles/atom-one-light.css'; // Changed theme
 
 interface SyntaxHighlighterProps {
   code: string;
   language: string;
 }
 
-export const SyntaxHighlighter = ({ code, language }: SyntaxHighlighterProps) => {
+export const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({ code, language }) => {
+  const codeRef = useRef(null);
+
   useEffect(() => {
-    const codeElements = document.querySelectorAll('.code-preview > code');
-    codeElements.forEach(element => {
-      hljs.highlightElement(element as HTMLElement);
-    });
-  }, [code]);
+    if (codeRef.current) {
+      hljs.highlightElement(codeRef.current);
+    }
+  }, [code, language]);
 
   return (
     <pre className="code-preview">
-      <code className={`language-${language}`}>
+      <code ref={codeRef} className={`language-${language}`}>
         {code}
       </code>
     </pre>

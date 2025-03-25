@@ -5,6 +5,8 @@ import { CodeSection } from './CodeSection';
 import { LoadingSpinner } from './LoadingSpinner';
 import prompts from '../prompts.json';
 import './CodeGenerator.css';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/default.css';
 
 interface CodeGeneratorProps {
   nodeData: NodeData[];
@@ -41,6 +43,14 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
     setCopyStates({});
     setIsVisible(true);
   }, [nodeData]);
+
+  useEffect(() => {
+    if (generatedCode?.code) {
+      document.querySelectorAll('pre code').forEach(block => {
+        hljs.highlightBlock(block as HTMLElement);
+      });
+    }
+  }, [generatedCode]);
 
   const handleGenerateCode = async () => {
     if (!nodeData.length) {
@@ -135,10 +145,11 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
 
   return (
     <div className="code-generator">
+             <h3>Selected Components Preview</h3>
       {/* Node Preview Section */}
       {hasSelection && nodeData.length > 0 && (
         <div className="node-preview">
-          <h3>Selected Components Preview</h3>
+   
           <div className="image-preview">
             <img 
               src={`data:image/png;base64,${arrayBufferToBase64(nodeData[0].image)}`}
