@@ -11,7 +11,8 @@
 /* Set a default font and background color */
 body {
   font-family: "Signika", sans-serif;
-  background-color: #f3f3f3;
+  /* background-color: #f3f3f3; */
+background-color: #e2ebf0;
   color: #2e2e2e;
   font-size: 14px;
   line-height: 16px;
@@ -20,7 +21,7 @@ body {
 .container {
   height: calc(100vh - 32px);
   overflow: hidden;
-  background-color: #ffffff;
+
 }
 
 /* Add some basic styling for headings */
