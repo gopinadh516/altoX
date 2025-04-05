@@ -1,6 +1,6 @@
 import { rgbToHex, convertFigmaAlignment } from './utils';
 
-figma.showUI(__html__, { width: 400, height: 600 });
+figma.showUI(__html__, { width: 500, height: 600 });
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'ready') {

@@ -6,51 +6,63 @@ import { LoadingSpinner } from './LoadingSpinner';
 import prompts from '../prompts.json';
 import './CodeGenerator.css';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/default.css';
+import 'highlight.js/styles/atom-one-dark.css';
 
 interface CodeGeneratorProps {
   nodeData: NodeData[];
   hasSelection: boolean;
 }
 
-type CopyStates = {
-  html?: CopyStatus;
-  css?: CopyStatus;
-  code?: CopyStatus;
-};
+type Tab = 'html' | 'css' | 'react';
 
 export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
-  const [selectedPrompt, setSelectedPrompt] = useState<keyof typeof prompts>(
-    Object.keys(prompts)[0] as keyof typeof prompts
-  );
+  const [selectedPrompt, setSelectedPrompt] = useState<keyof typeof prompts>('html5_css');
+  const [useBrandGuidelines, setUseBrandGuidelines] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<GeneratedCode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [copyStates, setCopyStates] = useState<CopyStates>({});
   const [error, setError] = useState<string | null>(null);
-  const [isVisible, setIsVisible] = useState(true);
-
-  const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
-    const binary = new Uint8Array(buffer).reduce(
-      (data, byte) => data + String.fromCharCode(byte),
-      ''
-    );
-    return window.btoa(binary);
-  };
+  const [activeTab, setActiveTab] = useState<Tab>('html');
+  const [codeSections, setCodeSections] = useState<Record<Tab, string>>({
+    html: '',
+    css: '',
+    react: '',
+  });
+  const [copyStates, setCopyStates] = useState<Record<Tab, CopyStatus>>({
+    html: 'idle',
+    css: 'idle',
+    react: 'idle',
+  });
 
   useEffect(() => {
     setGeneratedCode(null);
     setError(null);
-    setCopyStates({});
-    setIsVisible(true);
+    setCodeSections({
+      html: '',
+      css: '',
+      react: '',
+    });
   }, [nodeData]);
 
   useEffect(() => {
     if (generatedCode?.code) {
-      document.querySelectorAll('pre code').forEach(block => {
-        hljs.highlightBlock(block as HTMLElement);
+      // Dynamically split the generated code into sections based on the selected technology
+      const htmlMatch = generatedCode.code.match(/<html[\s\S]*<\/html>/i);
+      const cssMatch = generatedCode.code.match(/\/\*[\s\S]*?\*\/[\s\S]*}/i);
+      const reactMatch = generatedCode.code.match(/import React[\s\S]*export default [\s\S]*;/i);
+
+      setCodeSections({
+        html: htmlMatch ? htmlMatch[0] : '',
+        css: cssMatch ? cssMatch[0] : '',
+        react: reactMatch ? reactMatch[0] : '',
       });
     }
   }, [generatedCode]);
+
+  useEffect(() => {
+    if (Object.values(codeSections).some((section) => section)) {
+      hljs.highlightAll();
+    }
+  }, [codeSections]);
 
   const handleGenerateCode = async () => {
     if (!nodeData.length) {
@@ -64,14 +76,13 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
     }
 
     setIsLoading(true);
-    setIsVisible(false);
-    setCopyStates({});
     setError(null);
 
     try {
+      const promptKey = useBrandGuidelines ? 'brand_guidelines' : selectedPrompt;
       const result = await generateCodeFromGemini({
         jsonData: nodeData[0].json,
-        prompt: prompts[selectedPrompt]
+        prompt: prompts[promptKey],
       });
 
       if (result.error) {
@@ -79,7 +90,6 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
       }
 
       setGeneratedCode(result);
-      setIsVisible(true);
     } catch (error) {
       console.error('Code generation error:', error);
       setError(error instanceof Error ? error.message : 'Failed to generate code');
@@ -89,70 +99,53 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
     }
   };
 
-  const handleCopyCode = async (code: string, type: keyof CopyStates) => {
+  const handleCopyCode = async (code: string, tab: Tab) => {
     try {
       await navigator.clipboard.writeText(code);
-      setCopyStates(prev => ({ ...prev, [type]: 'copied' }));
+      setCopyStates((prev) => ({ ...prev, [tab]: 'copied' }));
       setTimeout(() => {
-        setCopyStates(prev => ({ ...prev, [type]: 'idle' }));
+        setCopyStates((prev) => ({ ...prev, [tab]: 'idle' }));
       }, 2000);
     } catch (error) {
       console.error('Copy error:', error);
-      setCopyStates(prev => ({ ...prev, [type]: 'error' }));
+      setCopyStates((prev) => ({ ...prev, [tab]: 'error' }));
       setTimeout(() => {
-        setCopyStates(prev => ({ ...prev, [type]: 'idle' }));
+        setCopyStates((prev) => ({ ...prev, [tab]: 'idle' }));
       }, 2000);
     }
   };
 
-  const renderCode = (code: string, language: string) => {
-    if (code.includes('---CSS---')) {
-      const [htmlPart, cssPart] = code.split('---CSS---').map(part => part.trim());
-      return (
-        <>
-          <CodeSection
-            code={htmlPart}
-            language="html"
-            label="HTML"
-            copyStatus={copyStates.html || 'idle'}
-            isLoading={isLoading}
-            onCopy={(code) => handleCopyCode(code, 'html')}
-          />
-          <CodeSection
-            code={cssPart}
-            language="css"
-            label="CSS"
-            copyStatus={copyStates.css || 'idle'}
-            isLoading={isLoading}
-            onCopy={(code) => handleCopyCode(code, 'css')}
-          />
-        </>
-      );
-    }
+  const renderTabs = () => {
+    const availableTabs = Object.entries(codeSections)
+      .filter(([_, code]) => code) // Only include tabs with content
+      .map(([tab]) => tab as Tab);
 
-    const displayLanguage = language === 'jsx' ? 'React + Tailwind' : language.toUpperCase();
     return (
-      <CodeSection
-        code={code}
-        language={language}
-        label={displayLanguage}
-        copyStatus={copyStates.code || 'idle'}
-        isLoading={isLoading}
-        onCopy={(code) => handleCopyCode(code, 'code')}
-      />
+      <div className="tab-buttons">
+        {availableTabs.map((tab) => (
+          <button
+            key={tab}
+            className={`tab-button ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)} {/* Capitalize tab names */}
+          </button>
+        ))}
+      </div>
     );
   };
 
   return (
     <div className="code-generator">
-             <h3>Selected Components Preview</h3>
+      <h3>Selected Components Preview</h3>
       {/* Node Preview Section */}
       {hasSelection && nodeData.length > 0 && (
         <div className="node-preview">
-   
           <div className="image-preview">
-            <img 
-              src={`data:image/png;base64,${arrayBufferToBase64(nodeData[0].image)}`}
+            <img
+              src={`data:image/png;base64,${btoa(
+                String.fromCharCode(...new Uint8Array(nodeData[0].image))
+              )}`}
               alt="Selected component preview"
             />
           </div>
@@ -168,13 +161,11 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
               id="prompt-select"
               value={selectedPrompt}
               onChange={(e) => setSelectedPrompt(e.target.value as keyof typeof prompts)}
-              disabled={isLoading}
+              disabled={isLoading || useBrandGuidelines}
             >
-              {Object.keys(prompts).map(key => (
-                <option key={key} value={key}>
-                  {key.replace(/_/g, ' + ')}
-                </option>
-              ))}
+              <option value="html5_css">HTML + CSS</option>
+              <option value="html_bootstrap5_css">HTML + Bootstrap5</option>
+              <option value="react_tailwind">React + Tailwind</option>
             </select>
             <button
               onClick={handleGenerateCode}
@@ -184,18 +175,56 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
               {isLoading ? <LoadingSpinner /> : 'Generate Code'}
             </button>
           </div>
+          <div className="checkbox-container">
+            <input
+              type="checkbox"
+              id="use-brand-guidelines"
+              checked={useBrandGuidelines}
+              onChange={(e) => setUseBrandGuidelines(e.target.checked)}
+              disabled={isLoading}
+            />
+            <label htmlFor="use-brand-guidelines">Use Brand Guidelines</label>
+          </div>
         </div>
       )}
 
       {/* Error Message */}
-      {error && (
-        <div className="error-message">{error}</div>
-      )}
+      {error && <div className="error-message">{error}</div>}
 
       {/* Generated Code Output */}
-      {generatedCode && isVisible && (
+      {generatedCode && (
         <div className="code-output">
-          {renderCode(generatedCode.code, generatedCode.language)}
+          {renderTabs()}
+          {activeTab === 'html' && codeSections.html && (
+            <CodeSection
+              code={codeSections.html}
+              language="html"
+              label="HTML"
+              copyStatus={copyStates.html}
+              isLoading={isLoading}
+              onCopy={() => handleCopyCode(codeSections.html, 'html')}
+            />
+          )}
+          {activeTab === 'css' && codeSections.css && (
+            <CodeSection
+              code={codeSections.css}
+              language="css"
+              label="CSS"
+              copyStatus={copyStates.css}
+              isLoading={isLoading}
+              onCopy={() => handleCopyCode(codeSections.css, 'css')}
+            />
+          )}
+          {activeTab === 'react' && codeSections.react && (
+            <CodeSection
+              code={codeSections.react}
+              language="jsx"
+              label="React"
+              copyStatus={copyStates.react}
+              isLoading={isLoading}
+              onCopy={() => handleCopyCode(codeSections.react, 'react')}
+            />
+          )}
         </div>
       )}
     </div>

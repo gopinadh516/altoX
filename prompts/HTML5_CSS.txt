@@ -31,7 +31,8 @@ Transform the raw JSON into a new JSON structure that represents the semantic me
 - Use CSS layout techniques (Flexbox, Grid) to achieve the desired positioning and responsiveness.
 - **Ensure the layout is responsive to different screen sizes using media queries.**
 - Use comments in the CSS to explain the purpose of specific rules or sections.
-
+- Use exact colour codes and text color code from json, make sure expecting pixel perfect .
+ 
 ### 5. Responsiveness:
 - Implement responsiveness using CSS media queries to adapt the layout and styling for different screen sizes (mobile, tablet, desktop).
 

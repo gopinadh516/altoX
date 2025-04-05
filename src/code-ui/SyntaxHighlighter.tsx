@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/atom-one-light.css'; // Changed theme
+import 'highlight.js/styles/atom-one-dark.css'; // Use a proper dark theme
 
 interface SyntaxHighlighterProps {
   code: string;
