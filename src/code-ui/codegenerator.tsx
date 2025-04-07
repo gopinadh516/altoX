@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { generateCodeFromGemini } from '../shared/services/gemini-service';
-import { NodeData, GeneratedCode, CopyStatus } from '../shared/types/gemini.types';
+import { NodeData, GeneratedCode } from '../shared/types/gemini.types';
 import { CodeSection } from './CodeSection';
 import { LoadingSpinner } from './LoadingSpinner';
 import prompts from '../prompts.json';
@@ -26,11 +26,6 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
     html: '',
     css: '',
     react: '',
-  });
-  const [copyStates, setCopyStates] = useState<Record<Tab, CopyStatus>>({
-    html: 'idle',
-    css: 'idle',
-    react: 'idle',
   });
 
   useEffect(() => {
@@ -99,19 +94,33 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
     }
   };
 
-  const handleCopyCode = async (code: string, tab: Tab) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopyStates((prev) => ({ ...prev, [tab]: 'copied' }));
-      setTimeout(() => {
-        setCopyStates((prev) => ({ ...prev, [tab]: 'idle' }));
-      }, 2000);
-    } catch (error) {
-      console.error('Copy error:', error);
-      setCopyStates((prev) => ({ ...prev, [tab]: 'error' }));
-      setTimeout(() => {
-        setCopyStates((prev) => ({ ...prev, [tab]: 'idle' }));
-      }, 2000);
+  const handleRunInBrowser = () => {
+    if (!codeSections.html) {
+      alert('No HTML code available to preview.');
+      return;
+    }
+
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Preview</title>
+          <style>
+            ${codeSections.css || ''}
+          </style>
+        </head>
+        <body>
+          ${codeSections.html || ''}
+        </body>
+        </html>
+      `;
+      newWindow.document.open();
+      newWindow.document.write(htmlContent);
+      newWindow.document.close();
     }
   };
 
@@ -196,35 +205,21 @@ export function CodeGenerator({ nodeData, hasSelection }: CodeGeneratorProps) {
         <div className="code-output">
           {renderTabs()}
           {activeTab === 'html' && codeSections.html && (
-            <CodeSection
-              code={codeSections.html}
-              language="html"
-              label="HTML"
-              copyStatus={copyStates.html}
-              isLoading={isLoading}
-              onCopy={() => handleCopyCode(codeSections.html, 'html')}
-            />
+            <CodeSection code={codeSections.html} language="html" label="HTML Code" isLoading={isLoading} />
           )}
           {activeTab === 'css' && codeSections.css && (
-            <CodeSection
-              code={codeSections.css}
-              language="css"
-              label="CSS"
-              copyStatus={copyStates.css}
-              isLoading={isLoading}
-              onCopy={() => handleCopyCode(codeSections.css, 'css')}
-            />
+            <CodeSection code={codeSections.css} language="css" label="CSS Code" isLoading={isLoading} />
           )}
           {activeTab === 'react' && codeSections.react && (
-            <CodeSection
-              code={codeSections.react}
-              language="jsx"
-              label="React"
-              copyStatus={copyStates.react}
-              isLoading={isLoading}
-              onCopy={() => handleCopyCode(codeSections.react, 'react')}
-            />
+            <CodeSection code={codeSections.react} language="jsx" label="React Code" isLoading={isLoading} />
           )}
+          <button
+            className="run-browser-button"
+            onClick={handleRunInBrowser}
+            disabled={!codeSections.html}
+          >
+            Run in Browser
+          </button>
         </div>
       )}
     </div>

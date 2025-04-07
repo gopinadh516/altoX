@@ -137,7 +137,7 @@
 }
 
 .code-header {
-  display: flex;
+  display: none;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
@@ -255,4 +255,26 @@ pre {
   font-size: 14px;
   color: #2a2a2a;
   cursor: pointer;
+}
+.run-browser-button {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  margin-top: 16px;
+}
+
+.run-browser-button:hover:not(:disabled) {
+  background: #388e3c;
+}
+
+.run-browser-button:disabled {
+  background: #ccc;
+  color: #666;
+  cursor: not-allowed;
 }

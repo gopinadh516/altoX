@@ -6,6 +6,7 @@
   "scripts": {
     "generate-prompts": "node generate-prompts.js",
     "main": "node build.js",
+     "start-server": "node server.js",
     "ui": "tsc && vite build --minify esbuild",
     "build": "npm run generate-prompts && concurrently -n main,ui \"npm run main\" \"npm run ui\"",
     "dev": "npm run generate-prompts && concurrently -n main,ui \"npm run main -- --watch\" \"npm run ui -- --watch\"",
